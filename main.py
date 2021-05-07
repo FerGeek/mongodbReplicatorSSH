@@ -148,7 +148,7 @@ if not path.isfile('./logs/current_errors.log'):
 # header = f"{' FROM DATABASE PRODUCTION '.center(107,'/')}\n{'Date'.ljust(40, ' ')}{'Collection'.ljust(17, ' ')}{'Total match'.ljust(17, ' ')}{'Inserted'.ljust(17, ' ')}{'Inserted'.ljust(17, ' ')}{'No inserted'.ljust(17, ' ')}\n"
 print(f'{strftime(f"%d-%m-%Y %H:%M:%S GMT{GMT}", date)}[{int(time())}]   {REMOTE_MONGO_COLLECTION.ljust(17, " ")}{str(total).ljust(17, " ")}{str(counterIns).ljust(17, " ")}{str(counterErr).ljust(17, " ")}')
 tmpFile = open('./logs/current_execution.log', 'a+')
-tmpFile.write(f'{strftime(f"%d-%m-%Y %H:%M:%S GMT{GMT}", date)}[{int(time())}]   {REMOTE_MONGO_COLLECTION.ljust(17, " ")}{str(total).ljust(17, " ")}{str(counterIns).ljust(17, " ")}{str(counterErr).ljust(17, " ")}')
+tmpFile.write(f'{strftime(f"%d-%m-%Y %H:%M:%S GMT{GMT}", date)}[{int(time())}]   {REMOTE_MONGO_COLLECTION.ljust(17, " ")}{str(total).ljust(17, " ")}{str(counterIns).ljust(17, " ")}{str(counterErr).ljust(17, " ")}\n')
 tmpFile.close()
 tmpFile = open('./logs/current_errors.log', 'a+')
 for x in errorFileContent:
