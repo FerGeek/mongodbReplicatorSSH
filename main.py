@@ -1,6 +1,6 @@
 import sshtunnel
 import pymongo
-from time import time
+from time import time, strftime, gmtime
 from os import path, scandir, environ
 from sys import argv
 from json import loads as decodeJSON
@@ -65,6 +65,7 @@ def dictDeconstruction(x):
     return ret
 
 
+# VALIDACION
 if len(argv) >= 1:
     fileConfName = f'./conf/{argv[0].lower()}.json'.replace('//', '/')
     if path.isfile(fileConfName):
@@ -81,17 +82,16 @@ if len(argv) >= 1:
 else:
     print(f"Profile name is required. Select profile: \n{chr(10).join([f' - {path.basename(x.path)[:-5]}' for x in scandir('./conf')])}")
     exit()
-print(conf)
 
 # Asignaciones
 SSH_SERVER = conf['SSH_SERVER']
 SSH_PORT = conf['SSH_PORT']
 SSH_USERNAME = conf['SSH_USERNAME']
 SSH_CERT = conf['SSH_CERT']
-MONGO_USER = conf['REMOTE_MONGO_USER']
-MONGO_PASS = conf['REMOTE_MONGO_PASS']
-MONGO_DB = conf['REMOTE_MONGO_DB']
-MONGO_COLLECTION = conf['REMOTE_MONGO_COLLECTION']
+REMOTE_MONGO_USER = conf['REMOTE_MONGO_USER']
+REMOTE_MONGO_PASS = conf['REMOTE_MONGO_PASS']
+REMOTE_MONGO_DB = conf['REMOTE_MONGO_DB']
+REMOTE_MONGO_COLLECTION = conf['REMOTE_MONGO_COLLECTION']
 LOCAL_BIND_ADDRESS = conf['LOCAL_BIND_ADDRESS']
 LOCAL_BIND_PORT = conf['LOCAL_BIND_PORT']
 LOCAL_MONGO_USER = conf['LOCAL_MONGO_USER']
@@ -100,7 +100,7 @@ LOCAL_MONGO_DB = conf['LOCAL_MONGO_DB']
 LOCAL_MONGO_HOST = conf['LOCAL_MONGO_HOST']
 LOCAL_MONGO_PORT = conf['LOCAL_MONGO_PORT']
 QUERY_MATCH = conf['QUERY_MATCH']
-MONGO_URI = f'mongodb://{MONGO_USER}:{MONGO_PASS}@{LOCAL_BIND_ADDRESS}:{LOCAL_BIND_PORT}'
+MONGO_URI = f'mongodb://{REMOTE_MONGO_USER}:{REMOTE_MONGO_PASS}@{LOCAL_BIND_ADDRESS}:{LOCAL_BIND_PORT}'
 db = pymongo.MongoClient(f'mongodb://{LOCAL_MONGO_USER}:{LOCAL_MONGO_PASS}@{LOCAL_MONGO_HOST}:{LOCAL_MONGO_PORT}/')[LOCAL_MONGO_DB]
 
 
@@ -116,23 +116,41 @@ def getData(collection_name, query={}):
     server.start()
     connection = pymongo.MongoClient(host=LOCAL_BIND_ADDRESS,
                                      port=server.local_bind_port,
-                                     username=MONGO_USER,
-                                     password=MONGO_PASS
+                                     username=REMOTE_MONGO_USER,
+                                     password=REMOTE_MONGO_PASS
                                      )
-    db = connection[MONGO_DB]
+    db = connection[REMOTE_MONGO_DB]
     data = db[collection_name].find(query)
     return data
 
 
+errorFileContent = []
 counterIns, counterErr, total = 0, 0, 0
-for entry in getData(MONGO_COLLECTION, QUERY_MATCH):
+for entry in getData(REMOTE_MONGO_COLLECTION, QUERY_MATCH):
     entry['dateInput'] = int(time())
     try:
         db.customers.insert_one(entry)
         counterIns += 1
     except Exception as e:
-        print(e)
+        errorFileContent.append(str(e))
         counterErr += 1
     total += 1
-    # print(entry)
-print(f'Inserts: {counterIns} | Errs: {counterErr}')
+GMT = -3  # TIMEZONE
+date = gmtime(time()+(GMT*3600))
+# Crear archivos si no existen
+if not path.isfile('./logs/current_execution.log'):
+    tmpFile = open('./logs/current_execution.log', 'w+')
+    tmpFile.write(f"{' FROM DATABASE PRODUCTION '.center(107,'/')}\n{'Date'.ljust(40, ' ')}{'Collection'.ljust(17, ' ')}{'Total match'.ljust(17, ' ')}{'Inserted'.ljust(17, ' ')}{'No inserted'.ljust(17, ' ')}\n")
+    tmpFile.close()
+if not path.isfile('./logs/current_errors.log'):
+    tmpFile = open('./logs/current_errors.log', 'w+')
+    tmpFile.close()
+# header = f"{' FROM DATABASE PRODUCTION '.center(107,'/')}\n{'Date'.ljust(40, ' ')}{'Collection'.ljust(17, ' ')}{'Total match'.ljust(17, ' ')}{'Inserted'.ljust(17, ' ')}{'Inserted'.ljust(17, ' ')}{'No inserted'.ljust(17, ' ')}\n"
+print(f'{strftime(f"%d-%m-%Y %H:%M:%S GMT{GMT}", date)}[{int(time())}]   {REMOTE_MONGO_COLLECTION.ljust(17, " ")}{str(total).ljust(17, " ")}{str(counterIns).ljust(17, " ")}{str(counterErr).ljust(17, " ")}')
+tmpFile = open('./logs/current_execution.log', 'a+')
+tmpFile.write(f'{strftime(f"%d-%m-%Y %H:%M:%S GMT{GMT}", date)}[{int(time())}]   {REMOTE_MONGO_COLLECTION.ljust(17, " ")}{str(total).ljust(17, " ")}{str(counterIns).ljust(17, " ")}{str(counterErr).ljust(17, " ")}')
+tmpFile.close()
+tmpFile = open('./logs/current_errors.log', 'a+')
+for x in errorFileContent:
+    tmpFile.write(x)
+tmpFile.close()
