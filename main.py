@@ -129,7 +129,7 @@ counterIns, counterErr, total = 0, 0, 0
 for entry in getData(REMOTE_MONGO_COLLECTION, QUERY_MATCH):
     entry['dateInput'] = int(time())
     try:
-        db.customers.insert_one(entry)
+        db[REMOTE_MONGO_COLLECTION].insert_one(entry)
         counterIns += 1
     except Exception as e:
         errorFileContent.append(str(e))
