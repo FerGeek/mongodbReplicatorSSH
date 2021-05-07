@@ -152,5 +152,5 @@ tmpFile.write(f'{strftime(f"%d-%m-%Y %H:%M:%S GMT{GMT}", date)}[{int(time())}]  
 tmpFile.close()
 tmpFile = open('./logs/current_errors.log', 'a+')
 for x in errorFileContent:
-    tmpFile.write(x)
+    tmpFile.write(f'{x}\n')
 tmpFile.close()
